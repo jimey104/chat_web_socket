@@ -1,9 +1,9 @@
 package com.example.chat_websocket.controller;
 
 import com.example.chat_websocket.entity.ChatMessage;
-import com.example.chat_websocket.entity.ChatRoom;
+import com.example.chat_websocket.entity.StudyGroup;
 import com.example.chat_websocket.repository.ChatMessageRepository;
-import com.example.chat_websocket.repository.ChatRoomRepository;
+import com.example.chat_websocket.repository.StudyGroupRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,78 +12,65 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/chatrooms")
+@RequestMapping("/studygroups")
 @RequiredArgsConstructor
-public class ChatRoomController {
+public class ChatRestController {
 
-    private final ChatRoomRepository chatRoomRepository;
+    private final StudyGroupRepository studyGroupRepository;
     private final ChatMessageRepository chatMessageRepository;
 
-    // ✅ 전체 채팅방 목록 조회
+    // ✅ 전체 StudyGroup 목록 조회 (선택사항)
     @GetMapping
-    public List<ChatRoom> getAllChatRooms() {
-        return chatRoomRepository.findAll();
+    public List<StudyGroup> getAllGroups() {
+        return studyGroupRepository.findAll();
     }
 
-    // 단일 채팅방 조회
-    @GetMapping("/{roomId}")
-    public ResponseEntity<ChatRoom> getChatRoom(@PathVariable Long roomId) {
-        return chatRoomRepository.findById(roomId)
+    // ✅ 단일 StudyGroup 조회
+    @GetMapping("/{groupId}")
+    public ResponseEntity<StudyGroup> getStudyGroup(@PathVariable Long groupId) {
+        return studyGroupRepository.findById(groupId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+    
+    @PostMapping
+    public ResponseEntity<StudyGroup> create(@RequestBody StudyGroup request) {
+        request.setCreatedAt(LocalDateTime.now());
+        if (request.getCurrentMember() == null) request.setCurrentMember(0);
+        if (request.getStatus() == null) request.setStatus("모집중");
 
-    @PostMapping("/{chatRoomName}")
-    public ResponseEntity<ChatRoom> createChatRoom(@PathVariable String chatRoomName) {
-        if (chatRoomName == null || chatRoomName.trim().isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        ChatRoom chatRoom = new ChatRoom();
-        chatRoom.setChatRoomName(chatRoomName);
-        ChatRoom saved = chatRoomRepository.save(chatRoom);
-
+        StudyGroup saved = studyGroupRepository.save(request);
         return ResponseEntity.ok(saved);
     }
 
-    @DeleteMapping("/{roomId}")
-    public ResponseEntity<Void> deleteChatRoom(@PathVariable Long roomId) {
-        if (!chatRoomRepository.existsById(roomId)) {
-            return ResponseEntity.notFound().build();
-        }
-
-        chatRoomRepository.deleteById(roomId);
-        return ResponseEntity.noContent().build(); // 204
-    }
-
-    // 채팅방의 메시지 전체 조회
-    @GetMapping("/{roomId}/messages")
-    public ResponseEntity<List<ChatMessage>> getMessages(@PathVariable Long roomId) {
-        return chatRoomRepository.findById(roomId)
-                .map(chatRoom -> ResponseEntity.ok(chatRoom.getMessages()))
+    // ✅ StudyGroup 기반 메시지 전체 조회
+    @GetMapping("/{groupId}/messages")
+    public ResponseEntity<List<ChatMessage>> getMessages(@PathVariable Long groupId) {
+        return studyGroupRepository.findById(groupId)
+                .map(group -> ResponseEntity.ok(chatMessageRepository.findByStudyGroupIdOrderByCreatedAt(groupId)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // 방식 메시지 저장
-    @PostMapping("/{roomId}/messages")
+    // ✅ 메시지 직접 저장 (REST 방식)
+    @PostMapping("/{groupId}/messages")
     public ResponseEntity<ChatMessage> sendMessage(
-            @PathVariable Long roomId,
+            @PathVariable Long groupId,
             @RequestBody ChatMessage request
     ) {
-        return chatRoomRepository.findById(roomId).map(chatRoom -> {
+        return studyGroupRepository.findById(groupId).map(group -> {
             ChatMessage message = new ChatMessage();
             message.setUserId(request.getUserId());
             message.setUserName(request.getUserName());
             message.setContent(request.getContent());
             message.setCreatedAt(LocalDateTime.now());
-            message.setChatRoom(chatRoom);
+            message.setStudyGroup(group);
 
             ChatMessage saved = chatMessageRepository.save(message);
             return ResponseEntity.ok(saved);
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // 단일 메시지 조회
+    // ✅ 단일 메시지 조회
     @GetMapping("/messages/{messageId}")
     public ResponseEntity<ChatMessage> getMessage(@PathVariable Long messageId) {
         return chatMessageRepository.findById(messageId)
@@ -91,7 +78,7 @@ public class ChatRoomController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // 메시지 삭제
+    // ✅ 메시지 삭제
     @DeleteMapping("/messages/{messageId}")
     public ResponseEntity<Void> deleteMessage(@PathVariable Long messageId) {
         if (!chatMessageRepository.existsById(messageId)) {
@@ -101,4 +88,3 @@ public class ChatRoomController {
         return ResponseEntity.noContent().build();
     }
 }
-

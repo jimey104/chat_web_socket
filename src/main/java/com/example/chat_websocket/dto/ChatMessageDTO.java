@@ -6,7 +6,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatMessageDTO {
-    private Long roomId;
+    private Long groupId;
     private Long userId;
     private String userName;
     private String content;

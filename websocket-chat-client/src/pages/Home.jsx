@@ -3,45 +3,50 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Home = () => {
-  const [rooms, setRooms] = useState([]);
-  const [newRoomName, setNewRoomName] = useState('');
+  const [groups, setGroups] = useState([]);
+  const [newTitle, setNewTitle] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('/chatrooms').then((res) => {
-      console.log('chatrooms 응답:', res.data); // 여기 추가
-      setRooms(res.data);
+    axios.get('/studygroups').then((res) => {
+      console.log('스터디 목록:', res.data);
+      setGroups(res.data);
     });
   }, []);
-  
 
-  const handleCreateRoom = async () => {
-    if (!newRoomName.trim()) return;
-    const res = await axios.post(`/chatrooms/${newRoomName}`);
-    setRooms((prev) => [...prev, res.data]);
-    console.log(rooms);
-    setNewRoomName('');
+  const handleCreateGroup = async () => {
+    if (!newTitle.trim()) return;
 
+    const payload = {
+      title: newTitle,
+      description: '새 스터디입니다.',
+      maxMember: 10,
+    };
+
+    const res = await axios.post('/studygroups', payload);
+    setGroups((prev) => [...prev, res.data]);
+    setNewTitle('');
   };
 
   return (
     <div style={{ padding: 20 }}>
-      <h2>💬 채팅방 목록</h2>
+      <h2>📚 스터디 그룹 목록</h2>
       <ul>
-        {rooms.map((room) => (
-          <li key={room.id}>
-            <button onClick={() => navigate(`/chat/${room.id}`)}>
-              {room.chatRoomName}
+        {groups.map((group) => (
+          <li key={group.id}>
+            <button onClick={() => navigate(`/main/${group.id}`)}>
+              {group.title}
             </button>
           </li>
         ))}
       </ul>
+
       <input
-        value={newRoomName}
-        onChange={(e) => setNewRoomName(e.target.value)}
-        placeholder="새 채팅방 이름"
+        value={newTitle}
+        onChange={(e) => setNewTitle(e.target.value)}
+        placeholder="새 스터디 제목"
       />
-      <button onClick={handleCreateRoom}>생성</button>
+      <button onClick={handleCreateGroup}>생성</button>
     </div>
   );
 };

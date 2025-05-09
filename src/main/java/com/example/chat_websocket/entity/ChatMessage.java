@@ -18,15 +18,17 @@ public class ChatMessage {
     private Long id;
 
     private Long userId;
-
     private String userName;
-
     private String content;
+
+    @ManyToOne
+    @JoinColumn(name = "study_group_id")
+    private StudyGroup studyGroup;
 
     private LocalDateTime createdAt;
 
-    @ManyToOne
-    @JsonIgnore
-    @JoinColumn(name = "chat_room_id")
-    private ChatRoom chatRoom;
+    @PrePersist
+    public void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
 }

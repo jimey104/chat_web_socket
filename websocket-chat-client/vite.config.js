@@ -9,6 +9,10 @@ export default defineConfig({
         target: 'http://localhost:8788',
         changeOrigin: true,
       },
+      '/studygroups': { // ✅ 요거 추가
+        target: 'http://localhost:8788',
+        changeOrigin: true,
+      },
       '/ws': {
         target: 'http://localhost:8788',
         ws: true,
@@ -16,6 +20,6 @@ export default defineConfig({
     },
   },
   define: {
-    global: 'globalThis', // ✅ 요거!
+    global: 'globalThis',
   },
 });

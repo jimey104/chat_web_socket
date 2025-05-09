@@ -1,98 +1,117 @@
 import React, { useEffect, useState, useRef } from 'react';
 import SockJS from 'sockjs-client';
-import { over } from 'stompjs';
+import { Client } from '@stomp/stompjs';
+import axios from 'axios';
+import '../styles/ChatRoom.css';
 
-const ChatRoom = () => {
-  const user = {
-    id: '123',
-    name: '홍길동'
+const ChatRoom = ({ groupId, userId = 123, userName = '홍길동' }) => {
+  const [messages, setMessages] = useState([]);
+  const [content, setContent] = useState('');
+  const stompRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const chatMessagesRef = useRef(null);
+  const isSelfMessageRef = useRef(false);
+  const [showNewMessageNotice, setShowNewMessageNotice] = useState(false);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowNewMessageNotice(false);
   };
 
-  const [stompClient, setStompClient] = useState(null);
-  const [chatMessages, setChatMessages] = useState([]);
-  const [message, setMessage] = useState('');
-  const [roomId, setRoomId] = useState('1');
-  const connectedRef = useRef(false);
-  const messageEndRef = useRef(null); // ✅ 자동 스크롤 기준점
+  const isNearBottom = () => {
+    const el = chatMessagesRef.current;
+    return el ? el.scrollHeight - el.scrollTop - el.clientHeight < 50 : false;
+  };
 
   useEffect(() => {
-    if (connectedRef.current) return;
+    if (!groupId) return;
 
-    const socket = new SockJS('http://localhost:8788/ws-chat');
-    const client = over(socket);
+    axios.get(`/studygroups/${groupId}/messages`)
+      .then((res) => setMessages(res.data));
 
-    client.connect({}, () => {
-      console.log('✅ STOMP 연결됨');
-      client.subscribe(`/topic/chat/${roomId}`, (msg) => {
-        console.log('📩 메시지 수신');
-        const body = JSON.parse(msg.body);
+    const socket = new SockJS('http://localhost:8788/ws');
+    const stompClient = new Client({
+      webSocketFactory: () => socket,
+      reconnectDelay: 5000,
+      onConnect: () => {
+        stompClient.subscribe(`/topic/chat/study-group/${groupId}`, (msg) => {
+          const body = JSON.parse(msg.body);
+          setMessages((prev) => [...prev, body]);
 
-        const now = new Date();
-        const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-        setChatMessages(prev => [...prev, `[${timestamp}] ${body.userName}: ${body.content}`]);
-      });
+          if (body.userName !== userName) {
+            if (!isNearBottom()) {
+              setShowNewMessageNotice(true);
+            }
+          } else {
+            isSelfMessageRef.current = true;
+            scrollToBottom();
+          }
+        });
+      },
     });
 
-    setStompClient(client);
-    connectedRef.current = true;
-  }, [roomId]);
+    stompClient.activate();
+    stompRef.current = stompClient;
 
-  // ✅ 자동 스크롤
+    return () => {
+      stompClient.deactivate();
+    };
+  }, [groupId]);
+
   useEffect(() => {
-    if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (isSelfMessageRef.current) {
+      scrollToBottom();
+      isSelfMessageRef.current = false;
     }
-  }, [chatMessages]);
+  }, [messages]);
 
-  const sendMessage = () => {
-    if (stompClient && message.trim() !== '') {
-      stompClient.send('/app/chat/send', {}, JSON.stringify({
-        roomId,
-        userId: user.id,
-        userName: user.name,
-        content: message
-      }));
-      setMessage('');
-    }
+  const handleSend = () => {
+    if (!content.trim() || !stompRef.current?.connected) return;
+
+    const dto = { groupId, userId, userName, content };
+    stompRef.current.publish({
+      destination: `/app/chat/study-group/${groupId}`,
+      body: JSON.stringify(dto),
+    });
+
+    isSelfMessageRef.current = true;
+    setContent('');
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      if (e.shiftKey) return;
-      e.preventDefault();
-      sendMessage();
-    }
-  };
+  const handleNewMessageClick = () => scrollToBottom();
 
   return (
-    <div>
-      <h2>채팅방 #{roomId}</h2>
-      <textarea
-        value={message}
-        onChange={e => setMessage(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="메시지 입력 (Enter 전송, Shift+Enter 줄바꿈)"
-        rows={2}
-        style={{
-          width: '300px',
-          resize: 'none',
-          padding: '8px',
-          marginTop: '8px',
-          borderRadius: '4px',
-        }}
-      />
-      <br />
-      <button onClick={sendMessage}>전송</button>
+    <div className="chat-container">
+      <h2 className="chat-header">💬 스터디 그룹 ID: {groupId}</h2>
+      <div className="chat-messages" ref={chatMessagesRef}>
+        {messages.map((msg, i) => (
+          <div
+            key={msg.id || i}
+            className={`chat-message ${msg.userName === userName ? 'me' : 'other'}`}
+          >
+            <div className="chat-bubble">
+              <strong className="chat-username">{msg.userName}</strong>
+              <div>{msg.content}</div>
+            </div>
+          </div>
+        ))}
+        {showNewMessageNotice && (
+          <div className="new-message-notice" onClick={handleNewMessageClick}>
+            📩 새로운 메시지
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
 
-      {/* ✅ 자동 스크롤 가능한 영역 */}
-      <div style={{ maxHeight: '300px', overflowY: 'auto', marginTop: '12px' }}>
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {chatMessages.map((msg, idx) => (
-            <li key={idx}>{msg}</li>
-          ))}
-          <div ref={messageEndRef} />
-        </ul>
+      <div className="chat-input-area">
+        <input
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          placeholder="메시지를 입력하세요"
+          className="chat-input"
+        />
+        <button onClick={handleSend} className="chat-button">보내기</button>
       </div>
     </div>
   );
