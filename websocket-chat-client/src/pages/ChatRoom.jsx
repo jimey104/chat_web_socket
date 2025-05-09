@@ -1,85 +1,80 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import SockJS from 'sockjs-client';
-import { over } from 'stompjs';
-import '../styles/chatroom.css'; // ✅ 일반 CSS import
+import { Client } from '@stomp/stompjs';
+import axios from 'axios';
 
 const ChatRoom = () => {
   const { roomId } = useParams();
-  const user = { id: '123', name: '홍길동' };
-
-  const [stompClient, setStompClient] = useState(null);
-  const [chatMessages, setChatMessages] = useState([]);
-  const [message, setMessage] = useState('');
-  const connectedRef = useRef(false);
-  const messageEndRef = useRef(null);
+  const [messages, setMessages] = useState([]);
+  const [content, setContent] = useState('');
+  const stompRef = useRef(null);
+  const userId = 2; // 임시 유저 ID
+  const userName = 'aasd'; // 임시 유저 이름
 
   useEffect(() => {
-    if (connectedRef.current) return;
+    // ✅ 초기 메시지 조회
+    axios.get(`/chatrooms/${roomId}/messages`).then((res) => setMessages(res.data));
 
-    const socket = new SockJS('http://localhost:8788/ws-chat');
-    const client = over(socket);
+    // ✅ WebSocket 연결
+    const socket = new SockJS('http://localhost:8788/ws');
+    const stompClient = new Client({
+      webSocketFactory: () => socket,
+      reconnectDelay: 5000,
+      onConnect: () => {
+        console.log('✅ WebSocket 연결 성공');
 
-    client.connect({}, () => {
-      client.subscribe(`/topic/chat/${roomId}`, (msg) => {
-        const body = JSON.parse(msg.body);
-        const now = new Date();
-        const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        setChatMessages(prev => [...prev, `[${timestamp}] ${body.userName}: ${body.content}`]);
-      });
+        // ✅ 구독 설정
+        stompClient.subscribe(`/topic/chat/${roomId}`, (msg) => {
+          const body = JSON.parse(msg.body);
+          setMessages((prev) => [...prev, body]);
+        });
+      },
     });
+    stompClient.activate();
+    stompRef.current = stompClient;
 
-    setStompClient(client);
-    connectedRef.current = true;
+    return () => {
+      stompClient.deactivate();
+    };
   }, [roomId]);
 
-  useEffect(() => {
-    if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [chatMessages]);
+  const handleSend = () => {
+    if (!content.trim() || !stompRef.current?.connected) return;
 
-  const sendMessage = () => {
-    if (stompClient && message.trim() !== '') {
-      stompClient.send('/app/chat/send', {}, JSON.stringify({
-        roomId,
-        userId: user.id,
-        userName: user.name,
-        content: message
-      }));
-      setMessage('');
-    }
-  };
+    const dto = {
+      userId,
+      userName,
+      content,
+      roomId, // ✅ DTO에 맞춰 정확히 전달
+    };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+    console.log('📤 전송할 메시지 DTO:', dto);
+
+    stompRef.current.publish({
+      destination: `/app/chat/send`, // ✅ 서버 ChatController에 맞춘 경로
+      body: JSON.stringify(dto),
+    });
+
+    setContent('');
   };
 
   return (
-    <div className="chat-room-container">
-      <h2>채팅방 #{roomId}</h2>
-
-      <div className="chat-messages">
-        <ul>
-          {chatMessages.map((msg, idx) => (
-            <li key={idx}>{msg}</li>
-          ))}
-          <div ref={messageEndRef} />
-        </ul>
+    <div style={{ padding: 20 }}>
+      <h2>💬 채팅방 ID: {roomId}</h2>
+      <div style={{ minHeight: 300, marginBottom: 20 }}>
+        {messages.map((msg, i) => (
+          <div key={msg.id || i}>
+            <strong>{msg.userName}:</strong> {msg.content}
+          </div>
+        ))}
       </div>
-
-      <textarea
-        className="chat-input"
-        value={message}
-        onChange={e => setMessage(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="메시지 입력 (Enter 전송, Shift+Enter 줄바꿈)"
-        rows={2}
+      <input
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="메시지를 입력하세요"
       />
-      <button onClick={sendMessage}>전송</button>
+      <button onClick={handleSend}>보내기</button>
     </div>
   );
 };

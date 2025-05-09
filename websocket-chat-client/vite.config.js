@@ -3,7 +3,19 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    proxy: {
+      '/chatrooms': {
+        target: 'http://localhost:8788',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: 'http://localhost:8788',
+        ws: true,
+      },
+    },
+  },
   define: {
-    global: 'globalThis', // 💡 핵심 해결 코드
+    global: 'globalThis', // ✅ 요거!
   },
 });

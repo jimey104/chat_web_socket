@@ -10,6 +10,8 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
+import java.time.LocalDateTime;
+
 @Controller
 @RequiredArgsConstructor
 public class ChatController {
@@ -18,6 +20,11 @@ public class ChatController {
     private final ChatMessageRepository chatMessageRepository;
     private final ChatRoomRepository chatRoomRepository;
 
+    /**
+     * 클라이언트가 /app/chat/send 로 메시지를 보내면
+     * 1. DB에 저장하고
+     * 2. /topic/chat/{roomId} 경로로 구독 중인 클라이언트에게 브로드캐스트
+     */
     @MessageMapping("/chat/send")
     public void sendMessage(ChatMessageDTO dto) {
         ChatRoom chatRoom = chatRoomRepository.findById(dto.getRoomId())
@@ -28,10 +35,12 @@ public class ChatController {
                 .userName(dto.getUserName())
                 .content(dto.getContent())
                 .chatRoom(chatRoom)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         chatMessageRepository.save(message);
 
+        // 프론트에 DTO 형태로 다시 브로드캐스트
         messagingTemplate.convertAndSend("/topic/chat/" + dto.getRoomId(), dto);
     }
 }
