@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import ChatRoom from '../components/ChatRoom';
+import api from '../api/api';
 
 const StudyGroupDetail = () => {
   const { groupId } = useParams();
@@ -12,7 +13,7 @@ const StudyGroupDetail = () => {
 
   
   useEffect(() => {
-    axios.get(`/api/group/chat/${groupId}`).then((res) => setGroup(res.data));
+    api.get(`/api/group/chat/${groupId}`).then((res) => setGroup(res.data));
   }, [groupId]);
 
   if (!group) return <div>로딩 중...</div>;
