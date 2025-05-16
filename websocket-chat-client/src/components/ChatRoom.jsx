@@ -3,7 +3,7 @@ import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import axios from 'axios';
 import '../styles/ChatRoom.css';
-import { WS_URL } from '../api/api';
+import api, { WS_URL } from '../api/api';
 
 const ChatRoom = ({ groupId, userId, userName }) => {
   const [messages, setMessages] = useState([]);
@@ -31,7 +31,7 @@ const ChatRoom = ({ groupId, userId, userName }) => {
   useEffect(() => {
     if (!groupId) return;
 
-    axios.get(`/api/group/chat/${groupId}/messages`)
+    api.get(`/api/group/chat/${groupId}/messages`)
       .then((res) => {
         setMessages(res.data)
         setTimeout(() => scrollToBottom(), 0);
