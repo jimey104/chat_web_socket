@@ -8,7 +8,7 @@ import api from '../api/api';
 const StudyGroupDetail = () => {
   const { groupId } = useParams();
   const [group, setGroup] = useState(null);
-  const [userId, setUserId] = useState(13);
+  const [userEmail, setUserEmail] = useState('test2@test.ts');
   const [userName, setUserName] = useState('홍길동');
 
   
@@ -28,7 +28,7 @@ const StudyGroupDetail = () => {
       <p>📌 상태: {group.status}</p>
 
       <hr />
-      <ChatRoom groupId={groupId} userId={userId} userName={userName} />
+      <ChatRoom groupId={groupId} userEmail={userEmail} userName={userName} />
     </div>
   );
 };

@@ -40,7 +40,7 @@ public class ChatService {
     public Optional<ChatMessage> saveMessage(Long groupId, ChatMessage request) {
         return studyGroupRepository.findById(groupId).map(group -> {
             ChatMessage message = ChatMessage.builder()
-                    .userId(request.getUserId())
+                    .userEmail(request.getUserEmail())
                     .userName(request.getUserName())
                     .content(request.getContent())
                     .createdAt(request.getCreatedAt())

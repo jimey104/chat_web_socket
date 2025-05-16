@@ -28,7 +28,7 @@ public class ChatController {
         dto.setCreatedAt(LocalDateTime.now());
 
         ChatMessage message = ChatMessage.builder()
-                .userId(dto.getUserId())
+                .userEmail(dto.getUserEmail())
                 .userName(dto.getUserName())
                 .content(dto.getContent())
                 .studyGroup(group)

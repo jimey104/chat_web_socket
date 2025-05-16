@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ChatMessageDTO {
     private Long groupId;
-    private Long userId;
+    private String userEmail;
     private String userName;
     private String content;
     private LocalDateTime createdAt;

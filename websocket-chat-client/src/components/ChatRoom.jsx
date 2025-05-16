@@ -5,7 +5,7 @@ import axios from 'axios';
 import '../styles/ChatRoom.css';
 import api, { WS_URL } from '../api/api';
 
-const ChatRoom = ({ groupId, userId, userName }) => {
+const ChatRoom = ({ groupId, userEmail, userName }) => {
   const [messages, setMessages] = useState([]);
   const [content, setContent] = useState('');
   const stompRef = useRef(null);
@@ -46,7 +46,7 @@ const ChatRoom = ({ groupId, userId, userName }) => {
           const body = JSON.parse(msg.body);
           setMessages((prev) => [...prev, body]);
 
-          if (body.userId !== userId) {
+          if (body.userEmail !== userEmail) {
             if (!isNearBottom()) {
               setShowNewMessageNotice(true);
             }
@@ -114,7 +114,7 @@ const ChatRoom = ({ groupId, userId, userName }) => {
   const handleSend = () => {
     if (!content.trim() || !stompRef.current?.connected) return;
 
-    const dto = { groupId, userId, userName, content };
+    const dto = { groupId, userEmail, userName, content };
     stompRef.current.publish({
       destination: `/app/chat/study-group/${groupId}`,
       body: JSON.stringify(dto),
@@ -167,8 +167,8 @@ const Avatar = ({ name }) => {
       <h2 className="chat-header">💬 스터디 그룹 ID: {groupId}</h2>
       <div className="chat-messages" ref={chatMessagesRef}>
         {messages.map((msg, i) => {
-          const isMe = msg.userId === userId;
-          const isSameUserAsPrevious = i > 0 && messages[i - 1].userId === msg.userId;
+          const isMe = msg.userEmail === userEmail;
+          const isSameUserAsPrevious = i > 0 && messages[i - 1].userEmail === msg.userEmail;
 
           return (
             <div
