@@ -26,6 +26,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  scroll-behavior: smooth;
 }
 
 .chat-message {
@@ -44,30 +45,81 @@
   text-align: left;
 }
 
+.chat-profile {
+  display: flex;
+}
+.chat-username {
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 4px;
+ margin-top: 12px;
+}
+
+.bubble-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.chat-message.me .bubble-row {
+  flex-direction: row-reverse;
+}
+
+.chat-message.other .bubble-row {
+  flex-direction: row;
+}
+
 .chat-bubble {
   padding: 10px 14px;
   border-radius: 18px;
   line-height: 1.4;
-  display: inline-block;
   word-break: break-word;
+  position: relative;
 }
 
+/* 🎯 테두리 추가 */
 .chat-message.me .chat-bubble {
   background-color: #dcf8c6;
   color: #000;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .chat-message.other .chat-bubble {
   background-color: #fff;
-  border: 1px solid #ddd;
   color: #000;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.chat-username {
-  font-size: 12px;
-  color: #555;
-  display: block;
-  margin-bottom: 4px;
+/* 꼬리 확대 */
+.chat-message.me .chat-bubble::after {
+  content: '';
+  position: absolute;
+  right: -8px;
+  top: 10px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid #dcf8c6;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+}
+
+.chat-message.other .chat-bubble::after {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 10px;
+  width: 0;
+  height: 0;
+  border-right: 8px solid #fff;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+}
+
+.chat-time {
+  font-size: 0.75rem;
+  color: #888;
+  white-space: nowrap;
+  margin-bottom: 2px;
 }
 
 .chat-input-area {
@@ -112,4 +164,16 @@
   margin: 0 auto;
   cursor: pointer;
   z-index: 2;
+  animation: fadeInUp 0.3s ease-in-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

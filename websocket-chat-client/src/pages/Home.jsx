@@ -8,7 +8,7 @@ const Home = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('/studygroups').then((res) => {
+    axios.get('/api/group/chat').then((res) => {
       console.log('스터디 목록:', res.data);
       setGroups(res.data);
     });
@@ -23,7 +23,7 @@ const Home = () => {
       maxMember: 10,
     };
 
-    const res = await axios.post('/studygroups', payload);
+    const res = await axios.post('/api/group/chat', payload);
     setGroups((prev) => [...prev, res.data]);
     setNewTitle('');
   };

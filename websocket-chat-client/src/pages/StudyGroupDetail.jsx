@@ -7,9 +7,12 @@ import ChatRoom from '../components/ChatRoom';
 const StudyGroupDetail = () => {
   const { groupId } = useParams();
   const [group, setGroup] = useState(null);
+  const [userId, setUserId] = useState(13);
+  const [userName, setUserName] = useState('홍길동');
 
+  
   useEffect(() => {
-    axios.get(`/studygroups/${groupId}`).then((res) => setGroup(res.data));
+    axios.get(`/api/group/chat/${groupId}`).then((res) => setGroup(res.data));
   }, [groupId]);
 
   if (!group) return <div>로딩 중...</div>;
@@ -24,7 +27,7 @@ const StudyGroupDetail = () => {
       <p>📌 상태: {group.status}</p>
 
       <hr />
-      <ChatRoom groupId={groupId} />
+      <ChatRoom groupId={groupId} userId={userId} userName={userName} />
     </div>
   );
 };

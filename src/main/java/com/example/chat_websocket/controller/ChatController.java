@@ -10,6 +10,8 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
+import java.time.LocalDateTime;
+
 @Controller
 @RequiredArgsConstructor
 public class ChatController {
@@ -23,14 +25,18 @@ public class ChatController {
         StudyGroup group = studyGroupRepository.findById(dto.getGroupId())
                 .orElseThrow(() -> new RuntimeException("스터디 그룹이 존재하지 않습니다."));
 
+        dto.setCreatedAt(LocalDateTime.now());
+
         ChatMessage message = ChatMessage.builder()
                 .userId(dto.getUserId())
                 .userName(dto.getUserName())
                 .content(dto.getContent())
                 .studyGroup(group)
+                .createdAt(dto.getCreatedAt())
                 .build();
 
         chatMessageRepository.save(message);
+
         messagingTemplate.convertAndSend("/topic/chat/study-group/" + dto.getGroupId(), dto);
     }
 }

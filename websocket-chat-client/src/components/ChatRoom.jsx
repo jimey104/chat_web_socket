@@ -3,8 +3,9 @@ import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import axios from 'axios';
 import '../styles/ChatRoom.css';
+import { WS_URL } from '../api/api';
 
-const ChatRoom = ({ groupId, userId = 123, userName = '홍길동' }) => {
+const ChatRoom = ({ groupId, userId, userName }) => {
   const [messages, setMessages] = useState([]);
   const [content, setContent] = useState('');
   const stompRef = useRef(null);
@@ -14,9 +15,13 @@ const ChatRoom = ({ groupId, userId = 123, userName = '홍길동' }) => {
   const [showNewMessageNotice, setShowNewMessageNotice] = useState(false);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    setShowNewMessageNotice(false);
+    const el = chatMessagesRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+      setShowNewMessageNotice(false);
+    }
   };
+
 
   const isNearBottom = () => {
     const el = chatMessagesRef.current;
@@ -26,10 +31,13 @@ const ChatRoom = ({ groupId, userId = 123, userName = '홍길동' }) => {
   useEffect(() => {
     if (!groupId) return;
 
-    axios.get(`/studygroups/${groupId}/messages`)
-      .then((res) => setMessages(res.data));
+    axios.get(`/api/group/chat/${groupId}/messages`)
+      .then((res) => {
+        setMessages(res.data)
+        setTimeout(() => scrollToBottom(), 0);
+      });
 
-    const socket = new SockJS('http://localhost:8788/ws');
+    const socket = new SockJS(WS_URL);
     const stompClient = new Client({
       webSocketFactory: () => socket,
       reconnectDelay: 5000,
@@ -38,7 +46,7 @@ const ChatRoom = ({ groupId, userId = 123, userName = '홍길동' }) => {
           const body = JSON.parse(msg.body);
           setMessages((prev) => [...prev, body]);
 
-          if (body.userName !== userName) {
+          if (body.userId !== userId) {
             if (!isNearBottom()) {
               setShowNewMessageNotice(true);
             }
@@ -58,6 +66,44 @@ const ChatRoom = ({ groupId, userId = 123, userName = '홍길동' }) => {
     };
   }, [groupId]);
 
+
+  function formatKakaoTime(localDateTimeStr) {
+    if (!localDateTimeStr) return '';
+
+    const trimmedStr = localDateTimeStr.split('.')[0];
+    const date = new Date(trimmedStr);
+    if (isNaN(date)) return '시간 오류';
+
+    const now = new Date();
+
+    const isToday =
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate();
+
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    const hour = date.getHours();
+    const minute = date.getMinutes().toString().padStart(2, '0');
+    const ampm = hour < 12 ? '오전' : '오후';
+    const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+
+    const timeStr = `${ampm} ${displayHour}:${minute}`;
+
+    if (isToday) {
+      return timeStr;
+    } else {
+      const dateStr = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 (${days[date.getDay()]})`;
+      return (
+        <>
+          {dateStr}
+          <br />
+          {timeStr}
+        </>
+      );
+    }
+  }
+
+  
   useEffect(() => {
     if (isSelfMessageRef.current) {
       scrollToBottom();
@@ -78,23 +124,73 @@ const ChatRoom = ({ groupId, userId = 123, userName = '홍길동' }) => {
     setContent('');
   };
 
+
+  const getColorFromName = (name) => {
+  const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7f50', '#a9a9a9', '#00bcd4', '#ff69b4', '#4caf50'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+};
+
+const Avatar = ({ name }) => {
+  const initial = name?.charAt(0) || '?';
+  const bgColor = getColorFromName(name);
+
+  return (
+    <div style={{
+      backgroundColor: bgColor,
+      color: 'white',
+      borderRadius: '50%',
+      width: 32,
+      height: 32,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontWeight: 'bold',
+      fontSize: 16,
+      marginRight: 8,
+      flexShrink: 0
+    }}>
+      {initial}
+    </div>
+  );
+};
+
+
   const handleNewMessageClick = () => scrollToBottom();
 
   return (
     <div className="chat-container">
       <h2 className="chat-header">💬 스터디 그룹 ID: {groupId}</h2>
       <div className="chat-messages" ref={chatMessagesRef}>
-        {messages.map((msg, i) => (
-          <div
-            key={msg.id || i}
-            className={`chat-message ${msg.userName === userName ? 'me' : 'other'}`}
-          >
-            <div className="chat-bubble">
-              <strong className="chat-username">{msg.userName}</strong>
-              <div>{msg.content}</div>
+        {messages.map((msg, i) => {
+          const isMe = msg.userId === userId;
+          const isSameUserAsPrevious = i > 0 && messages[i - 1].userId === msg.userId;
+
+          return (
+            <div
+              key={`${msg.id || 'no-id'}-${msg.createdAt || i}`}
+              className={`chat-message ${isMe ? 'me' : 'other'}`}
+            >
+            {/* ✅ 본인 메시지 아니면서 이전과 다른 유저일 때만 표시 */}
+            {!isMe && !isSameUserAsPrevious && (
+                <div className="chat-profile">
+                  <Avatar name={msg.userName} />
+                  <strong className="chat-username">
+                  {msg.userName}
+                </strong>
+                </div>
+              )}
+              <div className="bubble-row">
+                <div className="chat-bubble">{msg.content}</div>
+                <div className="chat-time">{formatKakaoTime(msg.createdAt)}</div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {showNewMessageNotice && (
           <div className="new-message-notice" onClick={handleNewMessageClick}>
             📩 새로운 메시지

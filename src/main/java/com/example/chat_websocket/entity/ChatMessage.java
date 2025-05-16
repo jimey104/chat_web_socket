@@ -26,9 +26,4 @@ public class ChatMessage {
     private StudyGroup studyGroup;
 
     private LocalDateTime createdAt;
-
-    @PrePersist
-    public void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
 }
