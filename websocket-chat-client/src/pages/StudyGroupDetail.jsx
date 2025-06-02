@@ -8,7 +8,7 @@ import api from '../api/api';
 const StudyGroupDetail = () => {
   const { groupId } = useParams();
   const [group, setGroup] = useState(null);
-  const [userEmail, setUserEmail] = useState('test2@test.ts');
+  const [userEmail, setUserEmail] = useState('test1@test.ts');
   const [userName, setUserName] = useState('홍길동');
 
   
